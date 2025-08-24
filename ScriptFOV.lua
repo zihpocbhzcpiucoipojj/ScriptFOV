@@ -1,5 +1,5 @@
 --[[ 
-  GUI FOV client-side avec toggle souris via CTRL (AZERTY)
+  GUI FOV client-side vertical (droite de l'écran)
 --]]
 
 local player = game.Players.LocalPlayer
@@ -14,10 +14,10 @@ local currentFOV = defaultFOV
 local screenGui = Instance.new("ScreenGui")
 screenGui.Parent = player:WaitForChild("PlayerGui")
 
--- Frame principale
+-- Frame principale (verticale)
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 300, 0, 90)
-frame.Position = UDim2.new(0.5, -150, 0, 50)
+frame.Size = UDim2.new(0, 120, 0, 200)
+frame.Position = UDim2.new(1, -130, 0.3, 0) -- à droite milieu
 frame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 frame.BorderSizePixel = 0
 frame.Parent = screenGui
@@ -37,16 +37,25 @@ closeButton.MouseButton1Click:Connect(function()
     frame.Visible = guiVisible
 end)
 
--- Slider
+-- Label
+local label = Instance.new("TextLabel")
+label.Size = UDim2.new(1, 0, 0, 20)
+label.Position = UDim2.new(0, 0, 0, 10)
+label.BackgroundTransparency = 1
+label.TextColor3 = Color3.fromRGB(255,255,255)
+label.Text = "FOV"
+label.Parent = frame
+
+-- Slider vertical
 local sliderBack = Instance.new("Frame")
-sliderBack.Size = UDim2.new(1, -20, 0, 20)
-sliderBack.Position = UDim2.new(0, 10, 0, 10)
+sliderBack.Size = UDim2.new(0, 20, 0.7, 0)
+sliderBack.Position = UDim2.new(0.5, -10, 0, 40)
 sliderBack.BackgroundColor3 = Color3.fromRGB(80,80,80)
 sliderBack.Parent = frame
 
 local sliderButton = Instance.new("TextButton")
-sliderButton.Size = UDim2.new(0, 20, 1, 0)
-sliderButton.Position = UDim2.new(0.5, -10, 0, 0)
+sliderButton.Size = UDim2.new(1, 0, 0, 20)
+sliderButton.Position = UDim2.new(0, 0, 0.5, -10)
 sliderButton.BackgroundColor3 = Color3.fromRGB(200,200,200)
 sliderButton.Text = ""
 sliderButton.Parent = sliderBack
@@ -60,24 +69,25 @@ UserInputService.InputEnded:Connect(function(input)
 end)
 
 local function updateFOV()
-    local relativePos = (sliderButton.Position.X.Offset + sliderButton.Size.X.Offset/2) / sliderBack.AbsoluteSize.X
-    currentFOV = 70 + relativePos * (150-70)
+    local relativePos = (sliderButton.Position.Y.Offset + sliderButton.Size.Y.Offset/2) / sliderBack.AbsoluteSize.Y
+    -- Inverser car haut = rapproché, bas = élargi
+    currentFOV = 70 + (1 - relativePos) * (150-70)
     camera.FieldOfView = currentFOV
 end
 
 RunService.RenderStepped:Connect(function()
     if draggingSlider then
-        local mouseX = UserInputService:GetMouseLocation().X
-        local sliderX = math.clamp(mouseX - sliderBack.AbsolutePosition.X - sliderButton.Size.X.Offset/2, 0, sliderBack.AbsoluteSize.X - sliderButton.Size.X.Offset)
-        sliderButton.Position = UDim2.new(0, sliderX, 0, 0)
+        local mouseY = UserInputService:GetMouseLocation().Y
+        local sliderY = math.clamp(mouseY - sliderBack.AbsolutePosition.Y - sliderButton.Size.Y.Offset/2, 0, sliderBack.AbsoluteSize.Y - sliderButton.Size.Y.Offset)
+        sliderButton.Position = UDim2.new(0, 0, 0, sliderY)
         updateFOV()
     end
 end)
 
 -- Reset FOV
 local resetButton = Instance.new("TextButton")
-resetButton.Size = UDim2.new(0, 80, 0, 20)
-resetButton.Position = UDim2.new(0.5, -40, 1, -25)
+resetButton.Size = UDim2.new(0.8, 0, 0, 25)
+resetButton.Position = UDim2.new(0.1, 0, 1, -35)
 resetButton.BackgroundColor3 = Color3.fromRGB(100,100,100)
 resetButton.TextColor3 = Color3.fromRGB(255,255,255)
 resetButton.Text = "Reset FOV"
@@ -86,20 +96,7 @@ resetButton.Parent = frame
 resetButton.MouseButton1Click:Connect(function()
     camera.FieldOfView = defaultFOV
     currentFOV = defaultFOV
-    sliderButton.Position = UDim2.new(0.5, -10, 0, 0)
-end)
-
--- Toggle souris avec CTRL
-local mouseUnlocked = false
-UserInputService.InputBegan:Connect(function(input, processed)
-    if not processed and input.KeyCode == Enum.KeyCode.LeftControl then
-        mouseUnlocked = not mouseUnlocked
-        if mouseUnlocked then
-            UserInputService.MouseBehavior = Enum.MouseBehavior.Default
-        else
-            UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
-        end
-    end
+    sliderButton.Position = UDim2.new(0, 0, 0.5, -10)
 end)
 
 -- Déplacement du frame
