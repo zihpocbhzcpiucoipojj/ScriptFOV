@@ -1,5 +1,5 @@
 --[[ 
-  GUI FOV client-side avec bouton "X" pour fermer/ouvrir
+  GUI FOV client-side avec toggle souris via CTRL (AZERTY)
 --]]
 
 local player = game.Players.LocalPlayer
@@ -16,25 +16,25 @@ screenGui.Parent = player:WaitForChild("PlayerGui")
 
 -- Frame principale
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 300, 0, 60)
-frame.Position = UDim2.new(0.5, -150, 0, 50) -- en haut
+frame.Size = UDim2.new(0, 300, 0, 90)
+frame.Position = UDim2.new(0.5, -150, 0, 50)
 frame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 frame.BorderSizePixel = 0
 frame.Parent = screenGui
 
--- Bouton "X" pour fermer/ouvrir
+-- Bouton "X"
 local closeButton = Instance.new("TextButton")
 closeButton.Size = UDim2.new(0, 25, 0, 25)
-closeButton.Position = UDim2.new(0.5, -150, 0, 50)
+closeButton.Position = UDim2.new(1, -30, 0, 5)
 closeButton.BackgroundColor3 = Color3.fromRGB(200,50,50)
 closeButton.TextColor3 = Color3.fromRGB(255,255,255)
 closeButton.Text = "X"
-closeButton.Parent = screenGui -- bouton indépendant pour rester visible
+closeButton.Parent = screenGui
 
 local guiVisible = true
 closeButton.MouseButton1Click:Connect(function()
-	guiVisible = not guiVisible
-	frame.Visible = guiVisible
+    guiVisible = not guiVisible
+    frame.Visible = guiVisible
 end)
 
 -- Slider
@@ -54,24 +54,24 @@ sliderButton.Parent = sliderBack
 local draggingSlider = false
 sliderButton.MouseButton1Down:Connect(function() draggingSlider = true end)
 UserInputService.InputEnded:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then
-		draggingSlider = false
-	end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        draggingSlider = false
+    end
 end)
 
 local function updateFOV()
-	local relativePos = (sliderButton.Position.X.Offset + sliderButton.Size.X.Offset/2) / sliderBack.AbsoluteSize.X
-	currentFOV = 70 + relativePos * (150-70)
-	camera.FieldOfView = currentFOV
+    local relativePos = (sliderButton.Position.X.Offset + sliderButton.Size.X.Offset/2) / sliderBack.AbsoluteSize.X
+    currentFOV = 70 + relativePos * (150-70)
+    camera.FieldOfView = currentFOV
 end
 
 RunService.RenderStepped:Connect(function()
-	if draggingSlider then
-		local mouseX = UserInputService:GetMouseLocation().X
-		local sliderX = math.clamp(mouseX - sliderBack.AbsolutePosition.X - sliderButton.Size.X.Offset/2, 0, sliderBack.AbsoluteSize.X - sliderButton.Size.X.Offset)
-		sliderButton.Position = UDim2.new(0, sliderX, 0, 0)
-		updateFOV()
-	end
+    if draggingSlider then
+        local mouseX = UserInputService:GetMouseLocation().X
+        local sliderX = math.clamp(mouseX - sliderBack.AbsolutePosition.X - sliderButton.Size.X.Offset/2, 0, sliderBack.AbsoluteSize.X - sliderButton.Size.X.Offset)
+        sliderButton.Position = UDim2.new(0, sliderX, 0, 0)
+        updateFOV()
+    end
 end)
 
 -- Reset FOV
@@ -84,54 +84,65 @@ resetButton.Text = "Reset FOV"
 resetButton.Parent = frame
 
 resetButton.MouseButton1Click:Connect(function()
-	camera.FieldOfView = defaultFOV
-	currentFOV = defaultFOV
-	sliderButton.Position = UDim2.new(0.5, -10, 0, 0)
+    camera.FieldOfView = defaultFOV
+    currentFOV = defaultFOV
+    sliderButton.Position = UDim2.new(0.5, -10, 0, 0)
 end)
 
--- Déplacement du GUI principal
+-- Toggle souris avec CTRL
+local mouseUnlocked = false
+UserInputService.InputBegan:Connect(function(input, processed)
+    if not processed and input.KeyCode == Enum.KeyCode.LeftControl then
+        mouseUnlocked = not mouseUnlocked
+        if mouseUnlocked then
+            UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+        else
+            UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
+        end
+    end
+end)
+
+-- Déplacement du frame
 local draggingFrame = false
 local dragStart, startPos
 frame.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 and not draggingSlider then
-		draggingFrame = true
-		dragStart = input.Position
-		startPos = frame.Position
-		input.Changed:Connect(function()
-			if input.UserInputState == Enum.UserInputState.End then
-				draggingFrame = false
-			end
-		end)
-	end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 and not draggingSlider then
+        draggingFrame = true
+        dragStart = input.Position
+        startPos = frame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                draggingFrame = false
+            end
+        end)
+    end
 end)
 
 frame.InputChanged:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseMovement then
-		if draggingFrame then
-			local delta = input.Position - dragStart
-			frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-		end
-	end
+    if input.UserInputType == Enum.UserInputType.MouseMovement and draggingFrame then
+        local delta = input.Position - dragStart
+        frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
 end)
 
 -- Déplacement du bouton X
 local draggingClose = false
 local closeStart, closePos
 closeButton.MouseButton1Down:Connect(function()
-	draggingClose = true
-	closeStart = UserInputService:GetMouseLocation()
-	closePos = closeButton.Position
+    draggingClose = true
+    closeStart = UserInputService:GetMouseLocation()
+    closePos = closeButton.Position
 end)
 
 UserInputService.InputChanged:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseMovement and draggingClose then
-		local delta = input.Position - closeStart
-		closeButton.Position = UDim2.new(closePos.X.Scale, closePos.X.Offset + delta.X, closePos.Y.Scale, closePos.Y.Offset + delta.Y)
-	end
+    if input.UserInputType == Enum.UserInputType.MouseMovement and draggingClose then
+        local delta = input.Position - closeStart
+        closeButton.Position = UDim2.new(closePos.X.Scale, closePos.X.Offset + delta.X, closePos.Y.Scale, closePos.Y.Offset + delta.Y)
+    end
 end)
 
 UserInputService.InputEnded:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then
-		draggingClose = false
-	end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        draggingClose = false
+    end
 end)
